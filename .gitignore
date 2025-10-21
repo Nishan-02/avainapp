@@ -1,0 +1,24 @@
+# Python backend
+backend/.venv/
+backend/__pycache__/
+backend/*.pyc
+
+# React frontend
+frontend/node_modules/
+frontend/build/
+frontend/.pnp.*
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files (optional)
+.idea/
+.vscode/
