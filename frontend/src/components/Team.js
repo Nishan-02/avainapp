@@ -30,7 +30,7 @@ function Team() {
     { 
       name: "Shishir", 
       photoUrl: "/images/shishir.jpeg", // Use .jpg, .png, etc.
-      linkedIn: "https://www.linkedin.com/in/shishir-r-kulal", 
+      linkedIn: "https://www.linkedin.com/in/shishir-r-kulal-4757a9296?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app", 
       github: "https://github.com/shishir-sh26" 
     },
     { 
@@ -42,9 +42,9 @@ function Team() {
     { 
       name: "Jaswin", 
       photoUrl: "/images/jaswin.png",
-      linkedIn: "https://linkedin.com/in/...", 
-      github: "https://github.com/..." 
-    },
+      linkedIn: "https://www.linkedin.com/in/jaswin-c-a-82493632b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app ",
+      github: "https://github.com/Jaswinn"
+    }
   ];
 
  return (
