@@ -1,7 +1,7 @@
 // src/components/Predictor.js
 import React, { useState, useEffect } from 'react';
 
-const BASE_API_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000';
+const BASE_API_URL = process.env.REACT_APP_API_BASE_URL || 'https://avainapp.onrender.com';
 
 function Predictor() {
   const [models, setModels] = useState([]);
