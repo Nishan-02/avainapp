@@ -54,11 +54,7 @@ The core intelligence of this project lies in its **Multi-Model Ensemble**. We t
 
 ---
 
-## 📸 Screenshots
 
-*(Add screenshots of your UI here later)*
-
----
 
 ## 🚀 Local Installation & Setup
 
