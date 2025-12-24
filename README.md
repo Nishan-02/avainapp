@@ -1,5 +1,4 @@
-# 🦅 Avian Weather Net
-
+# 🦅 Avian Weather Net  
 ### A Deep Learning Ensemble for Weather Prediction Using Bioacoustics
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://avainapp.vercel.app)
@@ -8,83 +7,101 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 
+---
+
 ## 📖 Project Overview
 
-**Avian Weather Net** is a research-driven Deep Learning project that bridges the gap between bioacoustics and meteorology. Our central research hypothesis investigates whether bird vocalizations—their calls, songs, and patterns—can serve as reliable, real-time indicators of local weather conditions.
+**Avian Weather Net** is a research-driven Deep Learning project that explores the intersection of **bioacoustics and meteorology**.  
+The core objective of this project is to determine whether **bird vocalizations**—including calls, songs, and acoustic patterns—can be used as reliable indicators of **local weather conditions**.
 
-To test this, we engineered a sophisticated data pipeline and a voting ensemble of **6 Deep Learning Models**. The system processes raw audio recordings (MP3/WAV) to classify the environment into five specific meteorological categories.
+To achieve this, we designed an end-to-end system that processes raw bird audio recordings (MP3/WAV), extracts meaningful acoustic features, and classifies the environment into predefined weather categories using an **ensemble of deep learning models**.
 
-**Target Classes:** `Sunny` | `Rainy` | `Cloudy` | `Windy` | `Foggy`
+### 🎯 Target Weather Classes
+`Sunny` | `Rainy` | `Cloudy` | `Windy` | `Foggy`
 
 ---
 
 ## 🧠 Deep Learning Architecture
 
-The core intelligence of this project lies in its **Multi-Model Ensemble**. We trained distinct architectures to capture different aspects of audio data (spatial features via Spectrograms and temporal sequences via MFCCs).
+The intelligence of Avian Weather Net is built on a **Multi-Model Ensemble Strategy**.  
+Each model is trained to capture different acoustic characteristics from bird audio, such as spatial patterns from spectrograms and temporal dependencies from MFCC sequences.
+
+### 🔹 Ensemble Models Used
 
 | Model | Architecture Type | Role & Specialty |
-| :--- | :--- | :--- |
-| **DeepCNN** | Deep Convolutional NN | Extracts spatial features from Mel-Spectrogram images. |
-| **ResNet** | Residual Network | Prevents vanishing gradients; captures deep hierarchical features. |
-| **CRNN** | Conv. Recurrent NN | A hybrid model capturing both spatial (Conv2D) and temporal (RNN) dependencies. |
-| **LSTM** | Long Short-Term Memory | Specialized in analyzing long-term dependencies in time-series audio data. |
-| **GRU-LSTM** | Gated Recurrent Unit + LSTM | Optimized for sequence learning with lower computational cost than pure LSTM. |
-| **Autoencoder** | Unsupervised Learning | Used for dimensionality reduction and latent feature extraction. |
+|------|-------------------|------------------|
+| **DeepCNN** | Deep Convolutional Neural Network | Extracts spatial patterns from Mel-Spectrogram images. |
+| **ResNet** | Residual Neural Network | Enables deep feature learning while preventing vanishing gradients. |
+| **CRNN** | Convolutional Recurrent Neural Network | Captures both spatial (CNN) and temporal (RNN) audio features. |
+| **LSTM** | Long Short-Term Memory Network | Learns long-term temporal dependencies in audio signals. |
+| **GRU-LSTM** | GRU + LSTM Hybrid | Efficient sequence learning with reduced computational cost. |
+| **Autoencoder** | Unsupervised Learning Model | Performs dimensionality reduction and latent feature extraction. |
 
-**Inference Mechanism:** The backend aggregates the softmax probability outputs from all six models and applies a **Majority Vote** algorithm to determine the final prediction with high confidence.
+### 🔁 Inference Strategy
+During inference, probability outputs from all six models are combined using a **Majority Voting mechanism**, resulting in a more **robust and accurate final prediction**.
+
+---
+
+## 🎧 Audio Processing Pipeline
+
+1. Raw bird audio collected from online sources and field recordings  
+2. Noise handling and segmentation  
+3. Feature extraction using:
+   - Mel-Spectrograms
+   - MFCCs
+4. Feature normalization and batching  
+5. Model-wise prediction and ensemble aggregation  
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Data Science & DL
-* **Frameworks:** PyTorch, TorchAudio
-* **Audio Processing:** Librosa (MFCC & Mel-Spectrogram generation)
-* **Data Handling:** NumPy, Pandas
+### 🔬 Data Science & Deep Learning
+- **Frameworks:** PyTorch, TorchAudio  
+- **Audio Processing:** Librosa (MFCC & Mel-Spectrograms)  
+- **Data Handling:** NumPy, Pandas  
 
-### Backend Engineering
-* **Framework:** FastAPI (High-performance Async support)
-* **Server:** Uvicorn
-* **Deployment:** Render
+### ⚙️ Backend Engineering
+- **Framework:** FastAPI  
+- **Server:** Uvicorn  
+- **Deployment:** Render  
 
-### Frontend Interface
-* **Framework:** React.js
-* **Styling:** Custom CSS (Theme: *Wet Asphalt & Butter*)
-* **Deployment:** Vercel
+### 🌐 Frontend Interface
+- **Framework:** React.js  
+- **Styling:** Custom CSS (Theme: *Wet Asphalt & Butter*)  
+- **Deployment:** Vercel  
 
 ---
 
+## 🚀 Features
 
+- 🎶 Weather prediction from raw bird audio
+- 🤖 Ensemble of 6 deep learning models
+- 🌦️ Classification into 5 weather categories
+- ⚡ FastAPI-based high-performance backend
+- 🌐 Interactive web interface for real-time prediction
 
-## 🚀 Local Installation & Setup
+---
 
-Follow these steps to run the research project locally.
+## 📌 Project Status
 
-### 1. Clone the Repository
-```bash
-git clone [https://github.com/Nishan-02/avainapp.git](https://github.com/Nishan-02/avainapp.git)
-cd avainapp
-cd backend
+✅ Completed and deployed  
+🌍 Live Web Application available  
 
-# Create virtual environment
-python -m venv .venv
+---
 
-# Activate environment
-# On Windows:
-.\.venv\Scripts\Activate
-# On Mac/Linux:
-source .venv/bin/activate
+## 🔮 Future Enhancements
 
-# Install Python dependencies
-pip install -r requirements.txt
+- Increase dataset size with region-specific bird species
+- Add attention-based deep learning models
+- Real-time audio streaming support
+- Mobile application integration
+- Explainable AI (XAI) for model decisions
 
-# Run the API Server
-uvicorn app.main:app --reload
-# Open a new terminal
-cd frontend
+---
 
-# Install Node modules
-npm install
+## ⭐ Acknowledgements
 
-# Start the React App
-npm start
+- Open-source bioacoustics and deep learning communities  
+- Dataset contributors and research references  
+- Team collaboration and academic guidance  
