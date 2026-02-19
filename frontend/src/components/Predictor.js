@@ -1,7 +1,7 @@
 // src/components/Predictor.js
 import React, { useState, useEffect } from 'react';
 
-const BASE_API_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+const BASE_API_URL = process.env.REACT_APP_API_BASE_URL || 'https://avainapp.onrender.com';
 
 function Predictor() {
   const [models, setModels] = useState([]);
@@ -12,15 +12,22 @@ function Predictor() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    console.log("Predictor: Using API URL:", BASE_API_URL);
     async function fetchModels() {
       try {
+        console.log(`Fetching models from: ${BASE_API_URL}/models`);
         const response = await fetch(`${BASE_API_URL}/models`);
-        if (!response.ok) throw new Error('Failed to fetch models list.');
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`Failed to fetch models list. Status: ${response.status}. Response: ${text}`);
+        }
 
         const data = await response.json();
+        console.log("Fetched models:", data);
         setModels(data.models || []);
       } catch (err) {
-        setError('Could not load models. Is the backend server running?');
+        const errorMsg = `Could not load models from ${BASE_API_URL}. Is the backend running? Error: ${err.message}`;
+        setError(errorMsg);
         console.error("Error fetching models:", err);
       }
     }
