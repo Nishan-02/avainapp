@@ -1,7 +1,7 @@
 // src/components/Predictor.js
 import React, { useState, useEffect } from 'react';
 
-const BASE_API_URL = process.env.REACT_APP_API_BASE_URL || 'https://avainapp.onrender.com/predict';
+const BASE_API_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
 
 function Predictor() {
   const [models, setModels] = useState([]);
@@ -16,7 +16,7 @@ function Predictor() {
       try {
         const response = await fetch(`${BASE_API_URL}/models`);
         if (!response.ok) throw new Error('Failed to fetch models list.');
-        
+
         const data = await response.json();
         setModels(data.models || []);
       } catch (err) {
@@ -54,7 +54,7 @@ function Predictor() {
     if (!selectedModel) {
       setError('Please select a model.'); return;
     }
-    
+
     setIsLoading(true);
     setResult(null);
     setError(null);
@@ -62,9 +62,9 @@ function Predictor() {
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('model_name', selectedModel); // Always send model_name
-    
+
     // We only use the 'single' endpoint now, as per your sketch
-    const apiEndpoint = `${BASE_API_URL}/predict/single`; 
+    const apiEndpoint = `${BASE_API_URL}/predict/single`;
 
     try {
       const response = await fetch(apiEndpoint, {
@@ -74,7 +74,7 @@ function Predictor() {
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || 'Prediction failed.');
-      
+
       const display = getWeatherDisplay(data.weather_prediction);
       setResult({ ...display, modelUsed: data.model_used });
 
@@ -88,13 +88,13 @@ function Predictor() {
   return (
     <section id="predictor" className="section">
       <form className="upload-form" onSubmit={handleSubmit}>
-        
+
         {/* --- NEW LAYOUT BASED ON SKETCH --- */}
         <h2>Select The model</h2>
         <div className="model-selection-grid" role="radiogroup">
           {models.map(modelName => (
             <div key={modelName}>
-              <input 
+              <input
                 type="radio" id={modelName} name="model-selection"
                 value={modelName} checked={selectedModel === modelName}
                 onChange={(e) => setSelectedModel(e.target.value)}
@@ -108,11 +108,11 @@ function Predictor() {
         </div>
 
         <h3 className="file-select-title">Select The File</h3>
-        <input 
-          type="file" 
+        <input
+          type="file"
           accept="audio/*"
           onChange={(e) => setSelectedFile(e.target.files[0])}
-          required 
+          required
         />
 
         <button type="submit" disabled={isLoading}>
