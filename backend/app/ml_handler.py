@@ -186,7 +186,10 @@ ALL_MODELS = load_all_models()
 # --- 4. Audio Preprocessing Function ---
 def process_audio(audio_path):
     try:
-        y, loaded_sr = librosa.load(audio_path, sr=SR, mono=True)
+        # Crucial Optimization: Load only the first 4 seconds.
+        # Since MAX_TIME_FRAMES = 128, we only need ~3.0 seconds of audio.
+        # Loading the entire file of long audio clips causes CPU timeouts.
+        y, loaded_sr = librosa.load(audio_path, sr=SR, mono=True, duration=4.0)
     except Exception as e:
         raise IOError(f"Failed to load audio file: {e}")
 
