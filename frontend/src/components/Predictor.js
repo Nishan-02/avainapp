@@ -1,9 +1,13 @@
 // src/components/Predictor.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 const BASE_API_URL = process.env.REACT_APP_API_BASE_URL || 'https://avainapp.onrender.com';
-const MAX_RETRIES = 5;
-const RETRY_DELAY_MS = 4000;
+
+// Render free tier cold starts can take up to 90s.
+// We retry every 6s for up to 15 attempts = 90s coverage.
+const MAX_RETRIES = 15;
+const RETRY_DELAY_MS = 6000;
+const FETCH_TIMEOUT_MS = 8000; // abort hung requests after 8s so retries aren't blocked
 
 function Predictor() {
   const [models, setModels] = useState([]);
@@ -12,45 +16,88 @@ function Predictor() {
   const [isLoading, setIsLoading] = useState(false);
   const [modelsLoading, setModelsLoading] = useState(true);
   const [wakeUpAttempt, setWakeUpAttempt] = useState(0);
+  const [countdown, setCountdown] = useState(0);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    console.log("Predictor: Using API URL:", BASE_API_URL);
+  const retryTimerRef = useRef(null);
+  const countdownTimerRef = useRef(null);
 
-    async function fetchModelsWithRetry(attempt = 1) {
-      try {
-        console.log(`[Attempt ${attempt}] Fetching models from: ${BASE_API_URL}/models`);
-        setWakeUpAttempt(attempt);
-        const response = await fetch(`${BASE_API_URL}/models`);
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(`Status: ${response.status}. Response: ${text}`);
-        }
-        const data = await response.json();
-        console.log("Fetched models:", data);
-        setModels(data.models || []);
+  const clearTimers = () => {
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+  };
+
+  const startCountdown = (seconds) => {
+    setCountdown(seconds);
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    countdownTimerRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) { clearInterval(countdownTimerRef.current); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const fetchModels = useCallback(async (attempt = 1) => {
+    setWakeUpAttempt(attempt);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    try {
+      console.log(`[Attempt ${attempt}/${MAX_RETRIES}] Fetching ${BASE_API_URL}/models`);
+      const response = await fetch(`${BASE_API_URL}/models`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`HTTP ${response.status}: ${text}`);
+      }
+
+      const data = await response.json();
+      console.log('Models loaded:', data);
+      clearTimers();
+      setModels(data.models || []);
+      setModelsLoading(false);
+      setWakeUpAttempt(0);
+      setCountdown(0);
+
+    } catch (err) {
+      clearTimeout(timeoutId);
+      const reason = err.name === 'AbortError' ? 'Request timed out' : err.message;
+      console.warn(`Attempt ${attempt} failed: ${reason}`);
+
+      if (attempt < MAX_RETRIES) {
+        // Show countdown before next attempt
+        const delaySec = Math.round(RETRY_DELAY_MS / 1000);
+        startCountdown(delaySec);
+        retryTimerRef.current = setTimeout(() => fetchModels(attempt + 1), RETRY_DELAY_MS);
+      } else {
+        clearTimers();
+        setError(
+          `Could not reach the backend after ${MAX_RETRIES} attempts (~90 seconds). ` +
+          `The server at ${BASE_API_URL} may be down. Last error: ${reason}`
+        );
         setModelsLoading(false);
-        setWakeUpAttempt(0);
-      } catch (err) {
-        console.warn(`Attempt ${attempt} failed: ${err.message}`);
-        if (attempt < MAX_RETRIES) {
-          // Render free tier needs time to wake up — retry automatically
-          setTimeout(() => fetchModelsWithRetry(attempt + 1), RETRY_DELAY_MS);
-        } else {
-          const errorMsg = `Could not connect to the backend at ${BASE_API_URL} after ${MAX_RETRIES} attempts. The server may be unavailable. Error: ${err.message}`;
-          setError(errorMsg);
-          setModelsLoading(false);
-          console.error("Error fetching models:", err);
-        }
       }
     }
-
-    fetchModelsWithRetry();
   }, []);
 
+  useEffect(() => {
+    fetchModels(1);
+    return () => clearTimers(); // cleanup on unmount
+  }, [fetchModels]);
+
+  const handleRetry = () => {
+    clearTimers();
+    setError(null);
+    setModelsLoading(true);
+    setModels([]);
+    fetchModels(1);
+  };
+
   const getWeatherDisplay = (prediction) => {
-    // (This function is unchanged)
     switch (prediction) {
       case "Clear Day":
         return { icon: 'fas fa-sun', text: 'Sunny' };
@@ -69,13 +116,8 @@ function Predictor() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!selectedFile) {
-      setError('Please select an audio file.'); return;
-    }
-    // Check if a model is selected
-    if (!selectedModel) {
-      setError('Please select a model.'); return;
-    }
+    if (!selectedFile) { setError('Please select an audio file.'); return; }
+    if (!selectedModel) { setError('Please select a model.'); return; }
 
     setIsLoading(true);
     setResult(null);
@@ -83,23 +125,17 @@ function Predictor() {
 
     const formData = new FormData();
     formData.append('file', selectedFile);
-    formData.append('model_name', selectedModel); // Always send model_name
-
-    // We only use the 'single' endpoint now, as per your sketch
-    const apiEndpoint = `${BASE_API_URL}/predict/single`;
+    formData.append('model_name', selectedModel);
 
     try {
-      const response = await fetch(apiEndpoint, {
+      const response = await fetch(`${BASE_API_URL}/predict/single`, {
         method: 'POST',
         body: formData,
       });
-
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || 'Prediction failed.');
-
       const display = getWeatherDisplay(data.weather_prediction);
       setResult({ ...display, modelUsed: data.model_used });
-
     } catch (err) {
       setError(err.message || 'An unknown error occurred.');
     } finally {
@@ -107,24 +143,50 @@ function Predictor() {
     }
   };
 
+  // Build the wake-up status label
+  const wakeUpLabel = () => {
+    if (wakeUpAttempt <= 1) return 'Connecting to backend...';
+    const secondsSpent = Math.round(((wakeUpAttempt - 1) * RETRY_DELAY_MS) / 1000);
+    if (countdown > 0) {
+      return `Server is starting up... retrying in ${countdown}s (${secondsSpent}s elapsed)`;
+    }
+    return `Waking up server... attempt ${wakeUpAttempt} of ${MAX_RETRIES}`;
+  };
+
+  // Progress bar: how far through the 90s window we are
+  const progressPercent = wakeUpAttempt > 0
+    ? Math.min(100, Math.round(((wakeUpAttempt - 1) / MAX_RETRIES) * 100))
+    : 0;
+
   return (
     <section id="predictor" className="section">
       <form className="upload-form" onSubmit={handleSubmit}>
 
-        {/* --- MODEL SELECTION AREA --- */}
+        {/* MODEL SELECTION */}
         <h2>Select The model</h2>
         <div className="model-selection-grid" role="radiogroup">
           {modelsLoading ? (
             <div className="model-wakeup-notice">
               <div className="spinner-small"></div>
-              <span>
-                {wakeUpAttempt > 1
-                  ? `Waking up the server... (attempt ${wakeUpAttempt}/${MAX_RETRIES})`
-                  : 'Connecting to backend...'}
-              </span>
+              <div className="wakeup-text-block">
+                <span className="wakeup-label">{wakeUpLabel()}</span>
+                <div className="wakeup-progress-bar">
+                  <div className="wakeup-progress-fill" style={{ width: `${progressPercent}%` }}></div>
+                </div>
+                <span className="wakeup-hint">
+                  ☕ Render free tier sleeps after inactivity. This only happens once.
+                </span>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="backend-error-block">
+              <p className="no-models-msg">⚠️ {error}</p>
+              <button type="button" className="retry-btn" onClick={handleRetry}>
+                🔄 Retry Connection
+              </button>
             </div>
           ) : models.length === 0 ? (
-            <p className="no-models-msg">⚠️ No models available. Check if the backend is running.</p>
+            <p className="no-models-msg">⚠️ Backend responded but returned no models.</p>
           ) : (
             models.map(modelName => (
               <div key={modelName}>
@@ -150,22 +212,19 @@ function Predictor() {
           required
         />
 
-        <button type="submit" disabled={isLoading || modelsLoading}>
+        <button type="submit" disabled={isLoading || modelsLoading || !!error}>
           {isLoading ? 'Analyzing...' : 'Predict Weather'}
         </button>
-        {/* --- END OF LAYOUT --- */}
-
 
       </form>
 
-      {/* --- Result Display Area (Unchanged) --- */}
       {isLoading && (
         <div className="result-container visible loading">
           <div className="spinner"></div>
           <p>Uploading and analyzing... Please wait.</p>
         </div>
       )}
-      {error && (
+      {!modelsLoading && error && !isLoading && (
         <div className="result-container visible error">
           <i className="result-icon fas fa-exclamation-triangle"></i>
           <p>{error}</p>

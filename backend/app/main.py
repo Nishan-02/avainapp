@@ -21,6 +21,12 @@ app.add_middleware(
 def read_root():
     return {"message": "Welcome to the Avian Weather Net API 🦅"}
 
+# /ping — lightweight health check for UptimeRobot keep-alive
+# This endpoint responds instantly and keeps Render from sleeping.
+@app.get("/ping")
+def ping():
+    return {"status": "ok"}
+
 # NEW: Endpoint to get the list of available models
 @app.get("/models")
 def get_models():
