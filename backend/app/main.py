@@ -1,5 +1,6 @@
-# backend/app/main.py (Updated)
+# backend/app/main.py
 
+import os
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from . import ml_handler
@@ -32,30 +33,31 @@ def ping():
 def get_models():
     return {"models": ml_handler.get_loaded_model_names()}
 
-# UPDATED: This is your endpoint for ensemble prediction
+# Ensemble prediction endpoint
 @app.post("/predict/ensemble")
 async def handle_ensemble_prediction(file: UploadFile = File(...)):
-    if not file.content_type.startswith("audio/"):
-        raise HTTPException(status_code=400, detail="Invalid file type.")
-    
+    # Accept any file — let librosa handle format errors gracefully
     audio_bytes = await file.read()
+    # Preserve original extension so librosa identifies the format correctly
+    ext = os.path.splitext(file.filename or "")[1] or ".wav"
     try:
-        prediction = ml_handler.predict_weather(audio_bytes)
-        # We now return the model_used for clarity on the frontend
+        prediction = ml_handler.predict_weather(audio_bytes, ext)
         return {"weather_prediction": prediction, "model_used": "Ensemble (All Models)"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred during prediction: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
-# NEW: Endpoint for single model prediction
+# Single-model prediction endpoint
 @app.post("/predict/single")
 async def handle_single_prediction(model_name: str = Form(...), file: UploadFile = File(...)):
-    if not file.content_type.startswith("audio/"):
-        raise HTTPException(status_code=400, detail="Invalid file type.")
-        
+    # Accept any file — let librosa handle format errors gracefully
     audio_bytes = await file.read()
+    # Preserve original extension so librosa identifies the format correctly
+    ext = os.path.splitext(file.filename or "")[1] or ".wav"
     try:
-        prediction = ml_handler.predict_with_single_model(audio_bytes, model_name)
-        # We return the specific model_name used
+        prediction = ml_handler.predict_with_single_model(audio_bytes, model_name, ext)
         return {"weather_prediction": prediction, "model_used": model_name}
+    except ValueError as e:
+        # Model not found — 400 so the frontend shows a meaningful message
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred during prediction: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")

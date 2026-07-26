@@ -215,12 +215,11 @@ def process_audio(audio_path):
 
 
 # --- 5. Prediction Function (Ensemble of all models) ---
-def predict_weather(audio_bytes: bytes) -> str:
+def predict_weather(audio_bytes: bytes, ext: str = ".wav") -> str:
     if not ALL_MODELS:
         raise RuntimeError("No models were loaded successfully. Cannot make a prediction.")
 
-    # Save audio bytes to a temporary file for librosa to read
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp_file:
         tmp_file.write(audio_bytes)
         tmp_file_path = tmp_file.name
 
@@ -230,17 +229,15 @@ def predict_weather(audio_bytes: bytes) -> str:
         
         with torch.no_grad():
             for model_name, model in ALL_MODELS.items():
-                # Select the correct input tensor based on the model type
                 if model_name in ["Autoencoder", "GRU-LSTM", "LSTM"]:
                     input_tensor = inputs['mfcc']
-                else: # ResNet, CRNN, DeepCNN
+                else:
                     input_tensor = inputs['spectrogram']
                 
                 output = model(input_tensor)
                 predicted_index = torch.argmax(output, dim=1).item()
                 all_predictions.append(predicted_index)
         
-        # Use majority vote for the final prediction
         if not all_predictions:
             return "Could not get a prediction."
             
@@ -248,7 +245,6 @@ def predict_weather(audio_bytes: bytes) -> str:
         final_prediction = WEATHER_CLASSES[most_common_index]
 
     finally:
-        # Clean up the temporary file to avoid leaving files behind
         os.unlink(tmp_file_path)
 
     return final_prediction
@@ -259,13 +255,13 @@ def get_loaded_model_names():
     """Returns a list of names of the models that were loaded successfully."""
     return list(ALL_MODELS.keys())
 
-def predict_with_single_model(audio_bytes: bytes, model_name: str) -> str:
+def predict_with_single_model(audio_bytes: bytes, model_name: str, ext: str = ".wav") -> str:
     """Runs prediction using only one specified model."""
     model = ALL_MODELS.get(model_name)
     if not model:
         raise ValueError(f"Model '{model_name}' was not found or not loaded.")
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp_file:
         tmp_file.write(audio_bytes)
         tmp_file_path = tmp_file.name
 
@@ -275,7 +271,7 @@ def predict_with_single_model(audio_bytes: bytes, model_name: str) -> str:
         with torch.no_grad():
             if model_name in ["Autoencoder", "GRU-LSTM", "LSTM"]:
                 input_tensor = inputs['mfcc']
-            else: # ResNet, CRNN, DeepCNN
+            else:
                 input_tensor = inputs['spectrogram']
             
             output = model(input_tensor)

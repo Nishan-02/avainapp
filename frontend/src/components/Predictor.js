@@ -127,17 +127,33 @@ function Predictor() {
     formData.append('file', selectedFile);
     formData.append('model_name', selectedModel);
 
+    // 60-second timeout — audio processing on Render's free CPU can be slow
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
     try {
       const response = await fetch(`${BASE_API_URL}/predict/single`, {
         method: 'POST',
         body: formData,
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+
       const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Prediction failed.');
+      if (!response.ok) throw new Error(data.detail || `Server error (${response.status})`);
+
       const display = getWeatherDisplay(data.weather_prediction);
       setResult({ ...display, modelUsed: data.model_used });
+
     } catch (err) {
-      setError(err.message || 'An unknown error occurred.');
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        setError('The prediction timed out after 60 seconds. The server may be overloaded — please try again.');
+      } else if (err.message === 'Failed to fetch') {
+        setError('Cannot reach the server. Please check your internet connection or try again in a moment.');
+      } else {
+        setError(err.message || 'An unknown error occurred.');
+      }
     } finally {
       setIsLoading(false);
     }
