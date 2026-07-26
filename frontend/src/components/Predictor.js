@@ -1,9 +1,9 @@
 // src/components/Predictor.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-const BASE_API_URL = process.env.REACT_APP_API_BASE_URL || 'https://avainapp.onrender.com';
+const BASE_API_URL = process.env.REACT_APP_API_BASE_URL || 'https://avainapp-backend-production-69fa.up.railway.app';
 
-// Render free tier cold starts can take up to 90s.
+// Railway backend cold starts can take a moment to spin up.
 // We retry every 6s for up to 15 attempts = 90s coverage.
 const MAX_RETRIES = 15;
 const RETRY_DELAY_MS = 6000;
@@ -190,7 +190,7 @@ function Predictor() {
                   <div className="wakeup-progress-fill" style={{ width: `${progressPercent}%` }}></div>
                 </div>
                 <span className="wakeup-hint">
-                  ☕ Render free tier sleeps after inactivity. This only happens once.
+                  ☕ Railway backend may take a moment to initialize on cold starts.
                 </span>
               </div>
             </div>
