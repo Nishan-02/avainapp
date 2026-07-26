@@ -6,10 +6,13 @@ from . import ml_handler
 
 app = FastAPI(title="Avian Weather Net API")
 
+# FIXED: allow_credentials=True cannot be used with allow_origins=["*"].
+# Browsers block this combination. We remove allow_credentials and keep
+# allow_origins=["*"] so any frontend (Vercel, localhost) can connect.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For development
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

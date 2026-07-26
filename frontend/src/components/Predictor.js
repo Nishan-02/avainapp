@@ -2,36 +2,51 @@
 import React, { useState, useEffect } from 'react';
 
 const BASE_API_URL = process.env.REACT_APP_API_BASE_URL || 'https://avainapp.onrender.com';
+const MAX_RETRIES = 5;
+const RETRY_DELAY_MS = 4000;
 
 function Predictor() {
   const [models, setModels] = useState([]);
-  const [selectedModel, setSelectedModel] = useState(''); // No default model
+  const [selectedModel, setSelectedModel] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [wakeUpAttempt, setWakeUpAttempt] = useState(0);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     console.log("Predictor: Using API URL:", BASE_API_URL);
-    async function fetchModels() {
+
+    async function fetchModelsWithRetry(attempt = 1) {
       try {
-        console.log(`Fetching models from: ${BASE_API_URL}/models`);
+        console.log(`[Attempt ${attempt}] Fetching models from: ${BASE_API_URL}/models`);
+        setWakeUpAttempt(attempt);
         const response = await fetch(`${BASE_API_URL}/models`);
         if (!response.ok) {
           const text = await response.text();
-          throw new Error(`Failed to fetch models list. Status: ${response.status}. Response: ${text}`);
+          throw new Error(`Status: ${response.status}. Response: ${text}`);
         }
-
         const data = await response.json();
         console.log("Fetched models:", data);
         setModels(data.models || []);
+        setModelsLoading(false);
+        setWakeUpAttempt(0);
       } catch (err) {
-        const errorMsg = `Could not load models from ${BASE_API_URL}. Is the backend running? Error: ${err.message}`;
-        setError(errorMsg);
-        console.error("Error fetching models:", err);
+        console.warn(`Attempt ${attempt} failed: ${err.message}`);
+        if (attempt < MAX_RETRIES) {
+          // Render free tier needs time to wake up — retry automatically
+          setTimeout(() => fetchModelsWithRetry(attempt + 1), RETRY_DELAY_MS);
+        } else {
+          const errorMsg = `Could not connect to the backend at ${BASE_API_URL} after ${MAX_RETRIES} attempts. The server may be unavailable. Error: ${err.message}`;
+          setError(errorMsg);
+          setModelsLoading(false);
+          console.error("Error fetching models:", err);
+        }
       }
     }
-    fetchModels();
+
+    fetchModelsWithRetry();
   }, []);
 
   const getWeatherDisplay = (prediction) => {
@@ -96,22 +111,35 @@ function Predictor() {
     <section id="predictor" className="section">
       <form className="upload-form" onSubmit={handleSubmit}>
 
-        {/* --- NEW LAYOUT BASED ON SKETCH --- */}
+        {/* --- MODEL SELECTION AREA --- */}
         <h2>Select The model</h2>
         <div className="model-selection-grid" role="radiogroup">
-          {models.map(modelName => (
-            <div key={modelName}>
-              <input
-                type="radio" id={modelName} name="model-selection"
-                value={modelName} checked={selectedModel === modelName}
-                onChange={(e) => setSelectedModel(e.target.value)}
-              />
-              <label htmlFor={modelName} className="model-card">
-                <i className="fas fa-microchip model-icon"></i>
-                <span>{modelName}</span>
-              </label>
+          {modelsLoading ? (
+            <div className="model-wakeup-notice">
+              <div className="spinner-small"></div>
+              <span>
+                {wakeUpAttempt > 1
+                  ? `Waking up the server... (attempt ${wakeUpAttempt}/${MAX_RETRIES})`
+                  : 'Connecting to backend...'}
+              </span>
             </div>
-          ))}
+          ) : models.length === 0 ? (
+            <p className="no-models-msg">⚠️ No models available. Check if the backend is running.</p>
+          ) : (
+            models.map(modelName => (
+              <div key={modelName}>
+                <input
+                  type="radio" id={modelName} name="model-selection"
+                  value={modelName} checked={selectedModel === modelName}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                />
+                <label htmlFor={modelName} className="model-card">
+                  <i className="fas fa-microchip model-icon"></i>
+                  <span>{modelName}</span>
+                </label>
+              </div>
+            ))
+          )}
         </div>
 
         <h3 className="file-select-title">Select The File</h3>
@@ -122,10 +150,11 @@ function Predictor() {
           required
         />
 
-        <button type="submit" disabled={isLoading}>
+        <button type="submit" disabled={isLoading || modelsLoading}>
           {isLoading ? 'Analyzing...' : 'Predict Weather'}
         </button>
-        {/* --- END OF NEW LAYOUT --- */}
+        {/* --- END OF LAYOUT --- */}
+
 
       </form>
 
